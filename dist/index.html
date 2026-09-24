@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="واجهة تحقق أمنية لاختبار الوصول المباشر إلى Sanad OCR API." />
+    <meta name="color-scheme" content="dark" />
+    <title>مختبر OCR — اختبار Sanad API</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2306373a'/%3E%3Cpath d='M19 18h20a7 7 0 0 1 7 7v20H26a7 7 0 0 1-7-7V18Z' fill='none' stroke='%2335e0b7' stroke-width='5'/%3E%3Cpath d='M27 28h12M27 36h8' stroke='white' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <header class="topbar">
+      <a class="brand" href="#workspace" aria-label="العودة إلى مساحة الاختبار">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 40 40" role="img"><path d="M9 8h15a7 7 0 0 1 7 7v17H16a7 7 0 0 1-7-7V8Z"/><path d="M16 17h10M16 23h7"/></svg>
+        </span>
+        <span><strong>OCR Lab</strong><small>Security proof interface</small></span>
+      </a>
+      <div class="connection" id="connectionBadge"><span></span> اتصال مباشر غير مصادق</div>
+    </header>
+
+    <main id="workspace">
+      <section class="intro" aria-labelledby="pageTitle">
+        <div class="eyebrow"><span>اختبار حي</span> واجهة مستقلة عن Sanad.ai</div>
+        <h1 id="pageTitle">اختبر الوصول المباشر إلى <em>Sanad OCR API</em></h1>
+        <p>اختر مستندًا تجريبيًا، وسترسله هذه الصفحة مباشرة إلى خادم سند من دون حساب أو مفتاح API. نجاح العملية يثبت أن الحماية الحالية موجودة في الواجهة وليست في الخادم.</p>
+      </section>
+
+      <aside class="security-note" aria-label="تنبيه أمني">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.8 19h18.4L12 3Zm0 5.4v5.1m0 3.1v.1"/></svg>
+        <div><strong>لا ترفع مستندات حقيقية أو سرية.</strong><span>هذا اختبار أمني، والملف ينتقل إلى <code>production-back.sanad.ai</code>.</span></div>
+      </aside>
+
+      <section class="workspace-grid">
+        <div class="panel upload-panel">
+          <div class="panel-head">
+            <div><span class="step">01</span><h2>المستند</h2></div>
+            <span class="limit">PNG · JPG · PDF / 30MB</span>
+          </div>
+
+          <div class="model-row" aria-label="نموذج الاستخراج">
+            <button class="model-card active" type="button" aria-pressed="true">
+              <span class="model-icon">Aa</span>
+              <span><strong>Generic OCR</strong><small>استخراج النص العربي والإنجليزي</small></span>
+              <span class="check" aria-hidden="true">✓</span>
+            </button>
+          </div>
+
+          <input id="fileInput" type="file" accept=".jpg,.jpeg,.png,application/pdf" hidden />
+          <button class="dropzone" id="dropzone" type="button">
+            <span class="upload-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg>
+            </span>
+            <strong>اسحب الملف هنا</strong>
+            <span>أو اضغط للاختيار من جهازك</span>
+          </button>
+
+          <div class="file-card hidden" id="fileCard">
+            <div class="file-preview" id="filePreview"><span>PDF</span></div>
+            <div class="file-meta"><strong id="fileName"></strong><span id="fileDetails"></span></div>
+            <button class="icon-button" id="removeFile" type="button" aria-label="إزالة الملف">×</button>
+          </div>
+
+          <div class="request-line">
+            <span>POST</span>
+            <code>/extract?modelId=generic&amp;fileType=<b id="fileType">image</b>&amp;mode=annotation</code>
+          </div>
+
+          <button class="primary" id="runButton" type="button" disabled>
+            <span class="button-label">تشغيل الاستخراج المباشر</span>
+            <span class="spinner" aria-hidden="true"></span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+        </div>
+
+        <div class="panel result-panel" aria-live="polite">
+          <div class="panel-head">
+            <div><span class="step">02</span><h2>النتيجة</h2></div>
+            <span class="result-status idle" id="resultStatus">بانتظار ملف</span>
+          </div>
+
+          <div class="empty-state" id="emptyState">
+            <div class="scan-frame" aria-hidden="true"><span></span><span></span><span></span><span></span><i></i></div>
+            <strong>ستظهر نتيجة OCR هنا</strong>
+            <p>سنعرض النص المستخرج، زمن المعالجة، وكود استجابة الخادم.</p>
+          </div>
+
+          <div class="error-state hidden" id="errorState">
+            <span class="error-icon">!</span>
+            <div><strong id="errorTitle">تعذّر الاستخراج</strong><p id="errorMessage"></p></div>
+          </div>
+
+          <div class="result-content hidden" id="resultContent">
+            <div class="metrics">
+              <div><small>HTTP</small><strong id="httpCode">201</strong></div>
+              <div><small>زمن الطلب</small><strong id="requestTime">—</strong></div>
+              <div><small>الصفحات</small><strong id="pageCount">—</strong></div>
+              <div><small>طلبات الجلسة</small><strong id="sessionCount">0</strong></div>
+            </div>
+
+            <div class="result-tabs" role="tablist" aria-label="عرض النتيجة">
+              <button class="active" type="button" role="tab" aria-selected="true" data-tab="text">النص المستخرج</button>
+              <button type="button" role="tab" aria-selected="false" data-tab="json">JSON الخام</button>
+            </div>
+
+            <div class="tab-pane" id="textPane"><pre id="extractedText"></pre></div>
+            <div class="tab-pane hidden" id="jsonPane"><pre id="rawJson"></pre></div>
+
+            <div class="result-actions">
+              <button class="secondary" id="copyButton" type="button">نسخ النص</button>
+              <button class="secondary" id="downloadButton" type="button">تنزيل TXT</button>
+              <button class="ghost" id="resetButton" type="button">اختبار ملف آخر</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="proof-strip" aria-label="ماذا يثبت هذا الاختبار">
+        <div><span>01</span><strong>لا يوجد Token</strong><small>الطلب لا يرسل Authorization.</small></div>
+        <div><span>02</span><strong>CORS مفتوح</strong><small>الخادم يسمح لأي Origin.</small></div>
+        <div><span>03</span><strong>الحد في المتصفح</strong><small>يمكن تجاوز localStorage.</small></div>
+      </section>
+    </main>
+
+    <footer>
+      <p>أداة تحقق خاصة — لا تستخدمها لمعالجة بيانات حساسة.</p>
+      <span>API target: production-back.sanad.ai</span>
+    </footer>
+  </body>
+</html>
